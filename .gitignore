@@ -115,3 +115,7 @@ temp/
 dist/
 dist-ssr/
 *.local
+
+# ATS Engine upload caches and local scan databases
+uploads/
+scans.json
