@@ -174,6 +174,8 @@ function setupEventListeners() {
   reanalyzeBtn.addEventListener('click', () => {
     document.getElementById('results-dashboard').classList.add('hidden');
     document.getElementById('empty-state-card').classList.remove('hidden');
+    const errorBanner = document.getElementById('error-banner');
+    if (errorBanner) errorBanner.classList.add('hidden');
     form.reset();
     resumeChip.classList.add('hidden');
     jdChip.classList.add('hidden');
@@ -190,6 +192,9 @@ function setupEventListeners() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const errorBanner = document.getElementById('error-banner');
+    if (errorBanner) errorBanner.classList.add('hidden');
+    
     const formData = new FormData(form);
     
     // UI Visual Progression Loader
@@ -201,10 +206,17 @@ function setupEventListeners() {
         body: formData
       });
       
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(text || 'Server returned an invalid response.');
+      }
       
       if (!response.ok) {
-        throw new Error(data.error || 'Server error during scanning.');
+        throw new Error(data?.error || 'Server error during scanning.');
       }
       
       showLoading(false);
@@ -212,7 +224,13 @@ function setupEventListeners() {
       await loadHistory(); // Reload history items
     } catch (err) {
       showLoading(false);
-      alert(err.message);
+      document.getElementById('empty-state-card').classList.remove('hidden');
+      if (errorBanner) {
+        document.getElementById('error-message').textContent = err.message;
+        errorBanner.classList.remove('hidden');
+      } else {
+        alert(err.message);
+      }
     }
   });
 }
@@ -311,7 +329,8 @@ function renderDashboard(data) {
   readiness.classList.add(`readiness-${data.hiringReadiness.toLowerCase()}`);
 
   document.getElementById('interview-probability-val').textContent = `${data.interviewProbability}%`;
-  document.getElementById('experience-matched-val').textContent = `${data.experienceYears} Yrs`;
+  const expVal = (data.experienceYears !== undefined && data.experienceYears !== null) ? `${data.experienceYears} Yrs` : 'N/A';
+  document.getElementById('experience-matched-val').textContent = expVal;
   document.getElementById('formatting-score-val').textContent = `${data.formattingAnalysis.compatibilityScore}%`;
 
   // 3. Score Breakdown Cards
@@ -672,7 +691,7 @@ function triggerReportPrint(scan) {
       <div>
         <h2 style="margin-bottom: 0.25rem;">${scan.resumeName}</h2>
         <p style="color: #64748b; font-size: 0.9rem;">Target Role: <strong>${scan.targetRole}</strong> &bull; Hiring Readiness: <strong>${scan.hiringReadiness}</strong></p>
-        <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.25rem;">Interview Probability: <strong>${scan.interviewProbability}%</strong> &bull; Extracted Experience: <strong>${scan.experienceYears} Years</strong></p>
+        <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.25rem;">Interview Probability: <strong>${scan.interviewProbability}%</strong> &bull; Extracted Experience: <strong>${(scan.experienceYears !== undefined && scan.experienceYears !== null) ? `${scan.experienceYears} Years` : 'N/A'}</strong></p>
       </div>
     </div>
 

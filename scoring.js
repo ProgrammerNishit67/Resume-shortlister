@@ -281,6 +281,7 @@ export function evaluateResume(resume, jd, targetRole) {
 
   return {
     overallScore,
+    experienceYears: resume.experienceYears,
     scoreBreakdown: {
       skillScore,
       experienceScore,
